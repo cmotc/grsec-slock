@@ -29,14 +29,12 @@
 #define CMD_LENGTH (500 * sizeof(char))
 
 #define POWEROFF 1
-#define TWILIO_SEND 1
-#define WEBCAM_SHOT 1
-#define IMGUR_UPLOAD 0
+#define USBOFF 1
+#define TWILIO_SEND 0
 #define PLAY_AUDIO 1
 #define TRANSPARENT 1
 
-#include "imgur.h"
-#include "twilio.h"
+//#include "twilio.h"
 
 typedef struct {
   char *link;
@@ -186,29 +184,33 @@ poweroff(void) {
 #endif
 }
 
-// Take a screenshot of whoever is at the keyboard.
-static int
-webcam_shot(int async) {
-#if WEBCAM_SHOT
-	char *cmd = (char *)malloc(CMD_LENGTH);
-
-	int r = snprintf(cmd, CMD_LENGTH,
-		"ffmpeg -y -loglevel quiet -f video4linux2 -i /dev/video0"
-		" -frames:v 1 -f image2 %s/slock.jpg%s",
-		getenv("HOME"), async ? " &" : "");
-
-	if (r > 0) {
-		system(cmd);
-		r = 0;
-	} else {
-		r = -1;
-	}
-
-	free(cmd);
-
-	return r;
+// Turn off USB if we're in danger.
+static void
+usboff(void) {
+#if USBOFF
+	// Needs sudo privileges - alter your /etc/sudoers file:
+	// systemd: [username] [hostname] =NOPASSWD: /usr/bin/systemctl poweroff
+	// sysvinit: [username] [hostname] =NOPASSWD: /usr/bin/shutdown -h now
+	char *args[] = { "sudo", "sysctl", "kernel.grsecurity.deny_new_usb=1", NULL };
+	execvp(args[0], args);
+	// Needs sudo privileges - alter your /etc/sudoers file:/s
 #else
-	return 0;
+	return;
+#endif
+}
+
+// Turn on USB when the correct password is entered.
+static void
+usbon(void) {
+#if USBOFF
+	// Needs sudo privileges - alter your /etc/sudoers file:
+	// systemd: [username] [hostname] =NOPASSWD: /usr/bin/systemctl poweroff
+	// sysvinit: [username] [hostname] =NOPASSWD: /usr/bin/shutdown -h now
+	char *args[] = { "sudo", "sysctl", "kernel.grsecurity.deny_new_usb=0", NULL };
+	execvp(args[0], args);
+	// Needs sudo privileges - alter your /etc/sudoers file:/s
+#else
+	return;
 #endif
 }
 
@@ -236,127 +238,6 @@ twilio_send(const char *msg, imgur_data *idata, int async) {
 	}
 
 	free(cmd);
-
-	return r;
-#else
-	return 0;
-#endif
-}
-
-static imgur_data *
-imgur_upload(void) {
-#if IMGUR_UPLOAD
-	char *buf = (char *)malloc(CMD_LENGTH);
-	imgur_data *idata = (imgur_data *)malloc(sizeof(imgur_data));
-	memset(idata, 0, sizeof(imgur_data));
-	int r;
-
-	// Upload the imgur image:
-	r = snprintf(buf, CMD_LENGTH,
-		"curl -s -A '' -X POST"
-		" -H 'Authorization: Client-ID " IMGUR_CLIENT "'"
-		" -F 'image=@%s/slock.jpg'"
-		" 'https://api.imgur.com/3/image' > %s/slock_imgur.curl",
-		getenv("HOME"), getenv("HOME"));
-
-	if (r > 0) {
-		system(buf);
-		r = 0;
-	} else {
-		r = -1;
-	}
-	if (r == -1) return NULL;
-
-	// Get the link:
-	r = snprintf(buf, CMD_LENGTH,
-		"cat %s/slock_imgur.curl"
-		" | grep -o '\"link\":\"[^\"]\\+'"
-		" | sed 's/\\\\//g'"
-		" | grep -o '[^\"]\\+$'"
-		" > %s/slock_imgur.link",
-		getenv("HOME"), getenv("HOME"));
-
-	if (r > 0) {
-		system(buf);
-		r = 0;
-	} else {
-		r = -1;
-	}
-	if (r == -1) return NULL;
-
-	// Get the deletehash:
-	r = snprintf(buf, CMD_LENGTH,
-		"cat %s/slock_imgur.curl"
-		" | grep -o '\"deletehash\":\"[^\"]\\+'"
-		" | grep -o '[^\"]\\+$'"
-		" > %s/slock_imgur.deletehash",
-		getenv("HOME"), getenv("HOME"));
-
-	if (r > 0) {
-		system(buf);
-		r = 0;
-	} else {
-		r = -1;
-	}
-	if (r == -1) return NULL;
-
-	r = snprintf(buf, CMD_LENGTH, "%s/slock_imgur.curl", getenv("HOME"));
-	if (r > 0) {
-		unlink(buf);
-	}
-
-	r = snprintf(buf, CMD_LENGTH, "%s/slock_imgur.link", getenv("HOME"));
-	if (r > 0) {
-		idata->link = read_tfile(buf);
-		unlink(buf);
-	}
-
-	r = snprintf(buf, CMD_LENGTH, "%s/slock_imgur.deletehash", getenv("HOME"));
-	if (r > 0) {
-		idata->deletehash = read_tfile(buf);
-		unlink(buf);
-	}
-
-	free(buf);
-
-	if (idata->link == NULL
-			|| !strlen(idata->link)
-			|| idata->deletehash == NULL
-			|| !strlen(idata->deletehash)) {
-		return NULL;
-	}
-
-	return idata;
-#else
-	return NULL;
-#endif
-}
-
-static int
-imgur_delete(imgur_data *idata) {
-#if IMGUR_UPLOAD
-	char *cmd = (char *)malloc(CMD_LENGTH);
-
-	// Delete the imgur image:
-	int r = snprintf(cmd, CMD_LENGTH,
-		"curl -s -A '' -X DELETE"
-		" -H 'Authorization: Client-ID " IMGUR_CLIENT "'"
-		" 'https://api.imgur.com/3/image/%s'", idata->deletehash);
-
-	// Wait for Twilio to do its request:
-	sleep(5);
-
-	if (r > 0) {
-		system(cmd);
-		r = 0;
-	} else {
-		r = -1;
-	}
-
-	free(cmd);
-	free(idata->link);
-	free(idata->deletehash);
-	free(idata);
 
 	return r;
 #else
@@ -412,12 +293,12 @@ readpw(Display *dpy, const char *pws)
 	len = 0;
 #endif
 	running = True;
-
 	/* As "slock" stands for "Simple X display locker", the DPMS settings
 	 * had been removed and you can set it with "xset" or some other
 	 * utility. This way the user can easily set a customized DPMS
 	 * timeout. */
 	while(running && !XNextEvent(dpy, &ev)) {
+                usboff();
 		if(ev.type == KeyPress) {
 			buf[0] = 0;
 			num = XLookupString(&ev.xkey, buf, sizeof buf, &ksym, 0);
@@ -452,17 +333,8 @@ readpw(Display *dpy, const char *pws)
 						// Disable alt+sysrq and crtl+alt+backspace
 						disable_kill();
 
-						// Take a webcam shot of whoever is tampering with our machine:
-						webcam_shot(0);
-
-						// Upload the image:
-						idata = imgur_upload();
-
 						// Send an SMS/MMS via twilio:
-						twilio_send("Bad screenlock password.", idata, 0);
-
-						// Delete the image from imgur:
-						imgur_delete(idata);
+						// twilio_send("Bad screenlock password.", idata, 0);
 
 						// Immediately poweroff:
 						poweroff();
@@ -471,11 +343,9 @@ readpw(Display *dpy, const char *pws)
 						len = 0;
 						break;
 					} else {
-						// Take a webcam shot of whoever is tampering with our machine:
-						webcam_shot(1);
 
 						// Send an SMS via twilio:
-						twilio_send("Bad screenlock password.", NULL, 1);
+						// twilio_send("Bad screenlock password.", NULL, 1);
 					}
 
 					// Play a siren if there are more than 2 bad
@@ -525,17 +395,9 @@ readpw(Display *dpy, const char *pws)
 				// Disable alt+sysrq and crtl+alt+backspace
 				disable_kill();
 
-				// Take a webcam shot of whoever is tampering with our machine:
-				webcam_shot(0);
-
-				// Upload our image:
-				idata = imgur_upload();
 
 				// Send an SMS/MMS via twilio:
-				twilio_send("Bad screenlock key.", idata, 0);
-
-				// Delete the image from imgur:
-				imgur_delete(idata);
+				// twilio_send("Bad screenlock key.", idata, 0);
 
 				// Immediately poweroff:
 				poweroff();
@@ -570,6 +432,7 @@ readpw(Display *dpy, const char *pws)
 
 static void
 unlockscreen(Display *dpy, Lock *lock) {
+        usbon();
 	if(dpy == NULL || lock == NULL)
 		return;
 
