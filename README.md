@@ -20,8 +20,11 @@ for me to use.
 
         kernel.grsecurity.grsec_lock = 0
 
-  and it also requires the same permissions as Automatic Shutdown in
+  and it also requires similar permissions as Automatic Shutdown in
   /etc/sudoers.
+
+    - `[username] [hostname] =NOPASSWD: /usr/bin/sysctl kernel.grsecurity.deny_new_usb=1`
+    - `[username] [hostname] =NOPASSWD: /usr/bin/sysctl kernel.grsecurity.deny_new_usb=0`
 
 - Alarms: A siren will play if a user enters an incorrect password. It must
   reside in ~/slock.

@@ -190,15 +190,13 @@ static void
 usboff(void) {
 #if USBOFF
 	// Needs sudo privileges - alter your /etc/sudoers file:
-	// systemd: [username] [hostname] =NOPASSWD: /usr/bin/systemctl poweroff
-	// sysvinit: [username] [hostname] =NOPASSWD: /usr/bin/shutdown -h now
+	// sysctl: [username] [hostname] =NOPASSWD: /usr/bin/sysctl kernel.grsecurity.deny_new_usb=0
 	char *args[] = { "sudo", "sysctl", "kernel.grsecurity.deny_new_usb=1", NULL };
         #if STRICT_USBOFF
                 char *argst[] = { "sudo", "sysctl", "kernel.grsecurity.grsec_lock=1", NULL };
                 execvp(argst[0], argst);
         #endif
 	execvp(args[0], args);
-	// Needs sudo privileges - alter your /etc/sudoers file:/s
 #else
 	return;
 #endif
@@ -209,11 +207,9 @@ static void
 usbon(void) {
 #if USBOFF
 	// Needs sudo privileges - alter your /etc/sudoers file:
-	// systemd: [username] [hostname] =NOPASSWD: /usr/bin/systemctl poweroff
-	// sysvinit: [username] [hostname] =NOPASSWD: /usr/bin/shutdown -h now
+	// sysctl: [username] [hostname] =NOPASSWD: /usr/bin/sysctl kernel.grsecurity.deny_new_usb=0
 	char *args[] = { "sudo", "sysctl", "kernel.grsecurity.deny_new_usb=0", NULL };
 	execvp(args[0], args);
-	// Needs sudo privileges - alter your /etc/sudoers file:/s
 #else
 	return;
 #endif
@@ -303,7 +299,6 @@ readpw(Display *dpy, const char *pws)
 	 * utility. This way the user can easily set a customized DPMS
 	 * timeout. */
 	while(running && !XNextEvent(dpy, &ev)) {
-                usboff();
 		if(ev.type == KeyPress) {
 			buf[0] = 0;
 			num = XLookupString(&ev.xkey, buf, sizeof buf, &ksym, 0);
@@ -555,7 +550,7 @@ lockscreen(Display *dpy, int screen) {
 	}
 	else
 		XSelectInput(dpy, lock->root, SubstructureNotifyMask);
-
+        usboff();
 	return lock;
 }
 
