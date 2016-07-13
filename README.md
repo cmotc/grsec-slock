@@ -9,6 +9,20 @@ for me to use.
   your user password on the X server. Simply create a ~/.slock_passwd file with
   your separate password in it.
 
+- GRSecurity BadUSB Prevention: If you have GRSecurity patched onto and enabled
+  in your kernel, when slock is started, all new USB devices will be disabled.
+  This requires that the kernel.grsecurity.grsec_lock sysctl option be set to 0,
+  which is a security risk to an attacker with local access. If you enable
+  STRICT\_USBOFF when slock comes on, kernel.grsecurity.grsec_lock will be set
+  to 1 and new USB devices will denied until you reboot.
+
+  You will need to have this line in your /etc/sysctl.d/grsec.conf
+
+        kernel.grsecurity.grsec_lock = 0
+
+  and it also requires the same permissions as Automatic Shutdown in
+  /etc/sudoers.
+
 - Alarms: A siren will play if a user enters an incorrect password. It must
   reside in ~/slock.
 
@@ -31,15 +45,23 @@ for me to use.
     encrypted home+swap partition. Once your machine is powered off. Your data
     is no longer accessible in any manner.
 
-- Webcam Support (requires ffmpeg): This will take a webcam shot of whoever may
-  be tampering with your machine before poweroff.
+- Webcam Support: Webcam support has been disabled. You should tape over your
+  webcam. Or just disconnect it. In lieu of this, some identification and
+  geolocation tools will be configurable at compile time.
 
-- Twilio Support: You will receive an SMS to your phone when someone inputs a
-  wrong password or pressed ALT/CTRL/F1-13/SYSRQ. See twilio_example.h to create a
-  twilio.h file. You will need a twilio account to set this up.
+- Twilio Support: Twilio is disabled in this version of the app while it is
+  replaced with a distributed option, probably based on email or ratox. Since
+  most phone services provide e-mail to SMS gateways this is an option that
+  provides greater liberty.
 
-  These SMS's can optionally be MMS's containing a webcam shot of whoever is
-  potentially tampering with your machine.
+  For now, the Twilio code has been left in, the legacy readme section is below.
+
+        You will receive an SMS to your phone when someone inputs a
+        wrong password or pressed ALT/CTRL/F1-13/SYSRQ. See twilio_example.h to create a
+        twilio.h file. You will need a twilio account to set this up.
+
+        These SMS's can optionally be MMS's containing a webcam shot of whoever is
+        potentially tampering with your machine.
 
 - Disabling alt+sysrq and ctrl+alt+backspace before shutting down: This
   prevents an attacker from killing the screenlock quickly before the shutdown.

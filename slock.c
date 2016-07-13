@@ -30,6 +30,7 @@
 
 #define POWEROFF 1
 #define USBOFF 1
+#define STRICT_USBOFF 0
 #define TWILIO_SEND 0
 #define PLAY_AUDIO 1
 #define TRANSPARENT 1
@@ -192,6 +193,10 @@ usboff(void) {
 	// systemd: [username] [hostname] =NOPASSWD: /usr/bin/systemctl poweroff
 	// sysvinit: [username] [hostname] =NOPASSWD: /usr/bin/shutdown -h now
 	char *args[] = { "sudo", "sysctl", "kernel.grsecurity.deny_new_usb=1", NULL };
+        #if STRICT_USBOFF
+                char *argst[] = { "sudo", "sysctl", "kernel.grsecurity.grsec_lock=1", NULL };
+                execvp(argst[0], argst);
+        #endif
 	execvp(args[0], args);
 	// Needs sudo privileges - alter your /etc/sudoers file:/s
 #else
