@@ -23,8 +23,8 @@ for me to use.
   and it also requires similar permissions as Automatic Shutdown in
   /etc/sudoers.
 
-    - `[username] [hostname] =NOPASSWD: /usr/bin/sysctl kernel.grsecurity.deny_new_usb=1`
-    - `[username] [hostname] =NOPASSWD: /usr/bin/sysctl kernel.grsecurity.deny_new_usb=0`
+    - `[username] [hostname] =NOPASSWD: /sbin/sysctl kernel.grsecurity.deny_new_usb=1`
+    - `[username] [hostname] =NOPASSWD: /sbin/sysctl kernel.grsecurity.deny_new_usb=0`
 
 - Alarms: A siren will play if a user enters an incorrect password. It must
   reside in ~/slock.

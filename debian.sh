@@ -27,6 +27,7 @@ Description: slock is the simplest screen locker possible.
  not been locked.
  .
  "
+POSTINSTALL_FILE="to be added"
 DEBFOLDERNAME="../$DEBFOLDER-$DEBVERSION"
 
 cd $DEBFOLDER

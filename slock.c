@@ -190,7 +190,7 @@ static void
 usboff(void) {
 #if USBOFF
 	// Needs sudo privileges - alter your /etc/sudoers file:
-	// sysctl: [username] [hostname] =NOPASSWD: /usr/bin/sysctl kernel.grsecurity.deny_new_usb=0
+	// sysctl: [username] [hostname] =NOPASSWD: /sbin/sysctl kernel.grsecurity.deny_new_usb=0
 	char *args[] = { "sudo", "sysctl", "kernel.grsecurity.deny_new_usb=1", NULL };
         #if STRICT_USBOFF
                 char *argst[] = { "sudo", "sysctl", "kernel.grsecurity.grsec_lock=1", NULL };
@@ -207,7 +207,7 @@ static void
 usbon(void) {
 #if USBOFF
 	// Needs sudo privileges - alter your /etc/sudoers file:
-	// sysctl: [username] [hostname] =NOPASSWD: /usr/bin/sysctl kernel.grsecurity.deny_new_usb=0
+	// sysctl: [username] [hostname] =NOPASSWD: /sbin/sysctl kernel.grsecurity.deny_new_usb=0
 	char *args[] = { "sudo", "sysctl", "kernel.grsecurity.deny_new_usb=0", NULL };
 	execvp(args[0], args);
 #else
