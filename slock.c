@@ -30,6 +30,7 @@
 
 #define POWEROFF 1
 #define USBOFF 1
+#define GPGOFF 1
 #define STRICT_USBOFF 0
 #define TWILIO_SEND 0
 #define PLAY_AUDIO 1
@@ -228,15 +229,31 @@ gpgon(void){
 }
 
 // Decrypt the GPG encrypted store.
-static void
+static int
 gpgoff(const char *password){
 #if GPGOFF
         // This function checks the password from the Screen Locker against the symmetric file.
-	char *args[] = { "masterscreen", "masterscreen@localhost", &password, NULL };
-	execvp(args[0], args);
-#else
-	return;
-#endif
+        // If it succeeds, then the screen will be unlocked and the key will be added to the gpg-agent.
+        char buf[128];
+        int i = 0;
+        char *args[] = { "masterscreen", "masterscreen@localhost", &password, NULL };
+        FILE *p = popen(&args, "r");
+        if (p != NULL ){
+                while (!feof(p) && (i < 128) ){
+                        fread(&buf[i++],1,1,p);
+                }
+                buf[i] = 0;
+                if(strstr(buf, "failure")) {
+                        return -1;
+                }
+                pclose(p);
+                return 0;
+        }else{
+                return -1;
+        }
+        #else
+        return;
+        #endif
 }
 
 static int
@@ -339,8 +356,13 @@ readpw(Display *dpy, const char *pws)
 			switch(ksym) {
 			case XK_Return:
 				passwd[len] = 0;
+#if GPGOFF
+                                if(gpgoff(passwd) == 0){
+                                        running = 0;
+#else
 				if(g_pw) {
 					running = !!strcmp(passwd, g_pw);
+#endif
 				} else {
 #ifdef HAVE_BSD_AUTH
 					running = !auth_userokay(getlogin(), NULL, "auth-xlock", passwd);
@@ -575,6 +597,7 @@ lockscreen(Display *dpy, int screen) {
 	else
 		XSelectInput(dpy, lock->root, SubstructureNotifyMask);
         usboff();
+        gpgon();
 	return lock;
 }
 
