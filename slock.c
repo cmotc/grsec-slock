@@ -215,6 +215,30 @@ usbon(void) {
 #endif
 }
 
+// Release the gpg keys.
+static void
+gpgon(void){
+#if GPGOFF
+        // This resets the GPG agent when the screen is locked.
+	char *args[] = { "masterscreen", NULL };
+	execvp(args[0], args);
+#else
+	return;
+#endif
+}
+
+// Decrypt the GPG encrypted store.
+static void
+gpgoff(const char *password){
+#if GPGOFF
+        // This function checks the password from the Screen Locker against the symmetric file.
+	char *args[] = { "masterscreen", "masterscreen@localhost", &password, NULL };
+	execvp(args[0], args);
+#else
+	return;
+#endif
+}
+
 static int
 twilio_send(const char *msg, imgur_data *idata, int async) {
 #if TWILIO_SEND
